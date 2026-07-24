@@ -1,155 +1,97 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Archive, BookOpenCheck, CheckCircle2, ClipboardList, ExternalLink, FileText, FolderOpen, History, Link2, PackageSearch, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { AlertTriangle, BarChart3, CheckCircle2, Clock3, FileSearch, Filter, Layers3, Package, RefreshCw, Search, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 
 const parts = [
-  {
-    part: "70196-03",
-    cases: 1,
-    selectedDev: "DEV260119",
-    status: "CONDITIONAL_REUSE",
-    rootCause: "Crack",
-    date: "17 Jan 25",
-    supplier: "Dong Tam",
-    customer: "DC",
-    lessonCode: "LL-00017",
-    reviewStatus: "Reusable with conditions",
-    issue: [
-      "During manufacture, staking joint rotated when it did not crack; when it did not rotate, it cracked.",
-      "Pushout force was 600–700 lbf, higher than the 325 lbf control limit.",
-      "Valve has lighter operating force than similar solenoids; no customer complaint so far."
-    ],
-    actions: ["Order new punch", "Consult with DC team", "Complete join", "Review backstop spec"],
-    result: "Accepted the current condition of slight rotation for the approved lot after review and verification.",
-    lesson: "Accept slight rotation only when staking joint does not crack and functional checks remain acceptable.",
-    scope: "Similar staking conditions and low-light force valves; approved lot and directly tested bobbins only.",
-    verify: "Fit test, crack inspection, pull force test; re-check staking trial before reuse.",
-  },
-  {
-    part: "53180-09",
-    cases: 6,
-    selectedDev: "DEV260142",
-    status: "REUSABLE_WITH_CONDITIONS",
-    rootCause: "Surface finish",
-    date: "24 Jul 26",
-    supplier: "Aster Precision",
-    customer: "FPC",
-    lessonCode: "LL-00031",
-    reviewStatus: "Reusable with conditions",
-    issue: ["Repeated surface crack after secondary machining.", "Crack risk increases when finish marks remain near the inspection zone.", "Prior cases were accepted only after containment and extra inspection."],
-    actions: ["Contain current lot", "Inspect crack depth", "Apply polish step", "Document extra verification"],
-    result: "Conditional reuse allowed only when no crack propagation is proven and finish meets inspection criteria.",
-    lesson: "Do not reuse previous approval blindly. Reuse only if crack location, depth, and process condition match previous evidence.",
-    scope: "Same part family, same machining process, same inspection location.",
-    verify: "Visual inspection, depth check, dimensional confirmation, source evidence review.",
-  },
-  {
-    part: "80005-01",
-    cases: 6,
-    selectedDev: "DEV260137",
-    status: "UPDATE_PROPOSED",
-    rootCause: "Fixture drift",
-    date: "23 Jul 26",
-    supplier: "Northline",
-    customer: "FPC",
-    lessonCode: "LL-00044",
-    reviewStatus: "Needs review",
-    issue: ["Dimension out of tolerance on datum B repeated across multiple lots.", "Prior action reduced drift but did not eliminate recurrence.", "Fixture wear condition may differ from approved lesson scope."],
-    actions: ["Stop affected fixture", "Check datum B", "Compare prior approval", "Open lesson update"],
-    result: "Pending reviewer decision because recurrence differs from previous accepted condition.",
-    lesson: "If datum drift repeats after fixture correction, escalate to process review instead of applying old containment only.",
-    scope: "Fixture-related dimensional drift only; not applicable to raw material variation.",
-    verify: "CMM check, fixture wear log, first article comparison.",
-  },
+  { part: "70196-03", cases: 1, open: 0, reusable: 1, rejected: 0, root: "Crack", severity: "Major", lesson: "Accept slight rotation only after staking joint and function checks pass.", action: "Repeat fit test, crack inspection, and pull force before reuse.", dev: "DEV260119", supplier: "Dong Tam", age: "17 Jan 25" },
+  { part: "53180-09", cases: 6, open: 2, reusable: 3, rejected: 1, root: "Surface finish", severity: "Critical", lesson: "Reuse previous approval only when crack depth, location, and process condition match evidence.", action: "Contain lot, inspect crack depth, review machining marks.", dev: "DEV260142", supplier: "Aster Precision", age: "24 Jul 26" },
+  { part: "80005-01", cases: 6, open: 3, reusable: 2, rejected: 1, root: "Fixture drift", severity: "Critical", lesson: "Repeated datum drift after fixture correction requires process review, not only containment.", action: "CMM check, fixture wear log, first article comparison.", dev: "DEV260137", supplier: "Northline", age: "23 Jul 26" },
+  { part: "34320-02", cases: 3, open: 0, reusable: 0, rejected: 3, root: "Crimp height", severity: "Critical", lesson: "Below-minimum crimp height is not reusable unless engineering releases a new verified limit.", action: "Reject lot, inspect tooling setting, document setup correction.", dev: "DEV250928", supplier: "Meiko", age: "11 Dec 25" },
+  { part: "88901-08", cases: 2, open: 1, reusable: 1, rejected: 0, root: "Contamination", severity: "Major", lesson: "Connector contamination can be conditionally reused only after cleaning validation.", action: "Clean sample, inspect pins, confirm contact resistance.", dev: "DEV250502", supplier: "Delta", age: "09 Nov 25" },
 ];
 
-function Status({ value }: { value: string }) {
-  const tone = value.includes("REJECT") ? "red" : value.includes("UPDATE") || value.includes("NEEDS") ? "amber" : "green";
-  return <span className={`status ${tone}`}>{value.replaceAll("_", " ")}</span>;
+const monthly = [18, 22, 16, 27, 21, 31, 25, 20];
+const rootCauses = [
+  ["Surface finish", 28, "#2563eb"],
+  ["Fixture drift", 23, "#7c3aed"],
+  ["Crack", 18, "#f97316"],
+  ["Crimp height", 14, "#ef4444"],
+  ["Contamination", 9, "#0ea5e9"],
+] as const;
+
+function Pill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "red" | "green" | "amber" | "blue" | "neutral" }) {
+  return <span className={`pill ${tone}`}>{children}</span>;
 }
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(parts[0]);
-  const filtered = useMemo(() => parts.filter((p) => `${p.part} ${p.selectedDev} ${p.rootCause} ${p.supplier}`.toLowerCase().includes(query.toLowerCase())), [query]);
+  const [selected, setSelected] = useState(parts[1]);
+  const filtered = useMemo(() => parts.filter((p) => `${p.part} ${p.root} ${p.dev} ${p.supplier}`.toLowerCase().includes(query.toLowerCase())), [query]);
+
+  const totals = useMemo(() => ({
+    cases: parts.reduce((sum, p) => sum + p.cases, 0),
+    open: parts.reduce((sum, p) => sum + p.open, 0),
+    reusable: parts.reduce((sum, p) => sum + p.reusable, 0),
+    rejected: parts.reduce((sum, p) => sum + p.rejected, 0),
+  }), []);
 
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div className="app-title"><div className="logo">KH</div><div><h1>Deviation Knowledge Hub</h1><p>Part-first retrieval · lessons learned · evidence trail</p></div></div>
-        <div className="header-actions"><button>Import</button><button>Import New</button><button><FolderOpen size={16}/>Data Folder</button><button><RefreshCw size={16}/>Refresh</button><span className="connected">● Connected</span></div>
-      </header>
+    <main className="dashboard-shell">
+      <aside className="sidebar">
+        <div className="brand"><div className="brand-icon">FPC</div><div><b>Deviation Hub</b><span>Quality intelligence</span></div></div>
+        <nav>
+          <button className="active"><BarChart3 size={17}/>Overview</button>
+          <button><Package size={17}/>Part Risk</button>
+          <button><FileSearch size={17}/>Evidence</button>
+          <button><ShieldCheck size={17}/>Lessons</button>
+        </nav>
+        <div className="sidebar-card"><b>Data health</b><span>152 records indexed</span><span className="ok-dot">● SQLite connected</span></div>
+      </aside>
 
-      <div className="main-grid">
-        <aside className="left-panel">
-          <section className="card search-card">
-            <h2><Search size={16}/> Search & Filter</h2>
-            <label>Keyword<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Part, DEV ID, root cause..." /></label>
-            <label>Part Number<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="70196" /></label>
-            <div className="button-row"><button className="primary">Search</button><button onClick={() => setQuery("")}>Reset</button></div>
-          </section>
+      <section className="workspace">
+        <header className="topbar">
+          <div><p>Manufacturing Quality Analytics</p><h1>Deviation statistics & part recurrence</h1></div>
+          <div className="actions"><button><RefreshCw size={16}/>Refresh</button><button className="primary"><Filter size={16}/>Filter report</button></div>
+        </header>
 
-          <section className="card summary-card">
-            <h2><PackageSearch size={16}/> Part Summary</h2>
-            <div className="summary-row"><span>Total Parts</span><b>{parts.length}</b></div>
-            <div className="summary-row"><span>Repeated Parts</span><b>{parts.filter((p) => p.cases > 1).length}</b></div>
-            <div className="summary-row"><span>Total Cases</span><b>{parts.reduce((a, p) => a + p.cases, 0)}</b></div>
-            <div className="summary-row"><span>Selected</span><b>{selected.part}</b></div>
-          </section>
+        <section className="kpi-grid">
+          <div className="kpi"><span>Total cases</span><strong>{totals.cases}</strong><em><TrendingUp size={15}/> +12% this quarter</em></div>
+          <div className="kpi"><span>Open review</span><strong>{totals.open}</strong><em className="warn"><Clock3 size={15}/> needs decision</em></div>
+          <div className="kpi"><span>Reusable lessons</span><strong>{totals.reusable}</strong><em className="good"><CheckCircle2 size={15}/> approved knowledge</em></div>
+          <div className="kpi"><span>Rejected</span><strong>{totals.rejected}</strong><em className="bad"><AlertTriangle size={15}/> hard stop cases</em></div>
+        </section>
 
-          <section className="card part-list">
-            <h2>Part Knowledge Index</h2>
-            {filtered.map((p) => <button key={p.part} className={selected.part === p.part ? "active" : ""} onClick={() => setSelected(p)}><span><b>{p.part}</b><small>{p.rootCause} · {p.selectedDev}</small></span><em>{p.cases} case(s)</em></button>)}
-          </section>
-        </aside>
-
-        <section className="detail-view">
-          <div className="part-header card">
-            <button className="back">←</button>
-            <div><p>PART</p><h2>{selected.part}</h2><span>Knowledge summary · Selected case {selected.selectedDev}</span></div>
-            <div className="part-header-right"><span>{selected.cases} case found</span><Status value={selected.status}/></div>
+        <section className="analytics-grid">
+          <div className="panel trend-panel">
+            <div className="panel-head"><div><h2>Deviation trend</h2><p>Cases found by recent import batches</p></div><Pill tone="blue">8 periods</Pill></div>
+            <div className="bars">{monthly.map((v, i) => <div className="bar-wrap" key={i}><div className="bar" style={{height: `${v * 4}px`}}/><span>{v}</span></div>)}</div>
           </div>
 
-          <section className="knowledge-grid">
-            <article className="knowledge-card problem">
-              <div className="card-title"><span className="step orange">1</span><div><h3>VẤN ĐỀ ĐÃ GẶP</h3><p>What happened?</p></div></div>
-              <ul>{selected.issue.map((item) => <li key={item}><AlertTriangle size={16}/>{item}</li>)}</ul>
-              <div className="mini-block"><b><ClipboardList size={16}/> Action plan in source</b><p>{selected.result}</p></div>
-            </article>
-
-            <article className="knowledge-card action">
-              <div className="card-title"><span className="step blue">2</span><div><h3>CÁCH ĐÃ XỬ LÝ</h3><p>What was done and result?</p></div></div>
-              <div className="check-list">{selected.actions.map((a) => <div key={a}><CheckCircle2 size={17}/>{a}</div>)}</div>
-              <div className="result-box"><b>Kết quả / Result</b><p>{selected.result}</p></div>
-            </article>
-
-            <article className="knowledge-card lesson">
-              <div className="card-title"><span className="step green">3</span><div><h3>KINH NGHIỆM KHI LẶP LẠI</h3><p>What should next engineer do?</p></div></div>
-              <div className="recommend"><ShieldCheck size={20}/><b>{selected.lesson}</b></div>
-              <div className="mini-block"><b>PHẠM VI ÁP DỤNG</b><p>{selected.scope}</p></div>
-              <div className="mini-block"><b>CẦN KIỂM TRA LẠI</b><p>{selected.verify}</p></div>
-            </article>
-          </section>
-
-          <section className="bottom-grid">
-            <div className="card history-card">
-              <h2><History size={17}/> LỊCH SỬ VẤN ĐỀ CÙNG PART</h2>
-              <table><thead><tr><th>DEV ID</th><th>Date</th><th>Issue</th><th>Root Cause</th></tr></thead><tbody><tr><td className="linkish">{selected.selectedDev}</td><td>{selected.date}</td><td>{selected.issue[0]}</td><td>{selected.rootCause}</td></tr></tbody></table>
-              <p className="footer-note">Showing 1 of {selected.cases} record(s)</p>
-            </div>
-
-            <div className="card evidence-card">
-              <h2><FileText size={17}/> EVIDENCE & REVIEW</h2>
-              <div className="evidence-row"><span>Lesson code</span><b>{selected.lessonCode}</b></div>
-              <div className="evidence-row"><span>Review status</span><Status value={selected.reviewStatus}/></div>
-              <div className="evidence-row"><span>Verification needed</span><b>Yes</b></div>
-              <div className="evidence-actions"><button><FileText size={15}/>Open Word</button><button><FileText size={15}/>Open PDF</button><button><FolderOpen size={15}/>Open Folder</button><button><Link2 size={15}/>Open Linked Evidence</button></div>
-              <div className="preview"><ExternalLink size={18}/><p>Document preview placeholder for source Word/PDF/evidence image.</p></div>
-            </div>
-          </section>
+          <div className="panel root-panel">
+            <div className="panel-head"><div><h2>Top root causes</h2><p>Where recurrence concentrates</p></div></div>
+            <div className="cause-list">{rootCauses.map(([name, value, color]) => <div key={name} className="cause-row"><span>{name}</span><div><i style={{width: `${value * 3}px`, background: color}}/><b>{value}%</b></div></div>)}</div>
+          </div>
         </section>
-      </div>
+
+        <section className="main-content">
+          <div className="panel part-table">
+            <div className="panel-head"><div><h2>Part recurrence leaderboard</h2><p>Click a part to view action knowledge</p></div><div className="search"><Search size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search part, DEV, supplier..." /></div></div>
+            <div className="table-head"><span>Part</span><span>Cases</span><span>Open</span><span>Root cause</span><span>Lesson status</span><span>Latest DEV</span></div>
+            {filtered.map((p) => <button key={p.part} className={`part-row ${selected.part === p.part ? "selected" : ""}`} onClick={() => setSelected(p)}>
+              <span><b>{p.part}</b><small>{p.supplier}</small></span><span>{p.cases}</span><span>{p.open}</span><span>{p.root}</span><span><Pill tone={p.reusable ? "green" : "red"}>{p.reusable ? "Reusable" : "Reject only"}</Pill></span><span>{p.dev}</span>
+            </button>)}
+          </div>
+
+          <aside className="panel knowledge-card">
+            <div className="panel-head"><div><h2>{selected.part}</h2><p>{selected.dev} · {selected.root}</p></div><Pill tone={selected.severity === "Critical" ? "red" : "amber"}>{selected.severity}</Pill></div>
+            <div className="knowledge-block"><span>Problem pattern</span><p>{selected.root} repeated in {selected.cases} case(s). Latest supplier: {selected.supplier}.</p></div>
+            <div className="knowledge-block"><span>Recommended action</span><p>{selected.action}</p></div>
+            <div className="knowledge-block highlight"><span>If similar case appears again</span><p>{selected.lesson}</p></div>
+            <div className="mini-stats"><div><b>{selected.reusable}</b><span>Reusable</span></div><div><b>{selected.rejected}</b><span>Rejected</span></div><div><b>{selected.open}</b><span>Open</span></div></div>
+          </aside>
+        </section>
+      </section>
     </main>
   );
 }
