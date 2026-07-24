@@ -14,7 +14,7 @@ const parts = [
 const monthly = [18, 22, 16, 27, 21, 31, 25, 20];
 const rootCauses = [
   ["Surface finish", 28, "#2563eb"],
-  ["Fixture drift", 23, "#7c3aed"],
+  ["Fixture drift", 7c3aed, "#7c3aed"],
   ["Crack", 18, "#f97316"],
   ["Crimp height", 14, "#ef4444"],
   ["Contamination", 9, "#0ea5e9"],
@@ -29,7 +29,6 @@ export default function Home() {
   const [selected, setSelected] = useState(parts[0]);
   const filtered = useMemo(() => parts.filter((p) => `${p.part} ${p.root} ${p.dev} ${p.supplier}`.toLowerCase().includes(query.toLowerCase())), [query]);
 
-  // Sync selected if it gets filtered out
   useMemo(() => {
     if (filtered.length > 0 && !filtered.find(p => p.part === selected.part)) {
       setSelected(filtered[0]);
