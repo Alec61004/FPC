@@ -1,100 +1,231 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, CheckCircle2, Clock3, FileSearch, Filter, Layers3, Package, RefreshCw, Search, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  FileText,
+  Filter,
+  Package,
+  Search,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
 
 const parts = [
-  { part: "70196-03", cases: 1, open: 0, reusable: 1, rejected: 0, root: "Crack", severity: "Major", lesson: "Accept slight rotation only after staking joint and function checks pass.", action: "Repeat fit test, crack inspection, and pull force before reuse.", dev: "DEV260119", supplier: "Dong Tam", age: "17 Jan 25" },
-  { part: "53180-09", cases: 6, open: 2, reusable: 3, rejected: 1, root: "Surface finish", severity: "Critical", lesson: "Reuse previous approval only when crack depth, location, and process condition match evidence.", action: "Contain lot, inspect crack depth, review machining marks.", dev: "DEV260142", supplier: "Aster Precision", age: "24 Jul 26" },
-  { part: "80005-01", cases: 6, open: 3, reusable: 2, rejected: 1, root: "Fixture drift", severity: "Critical", lesson: "Repeated datum drift after fixture correction requires process review, not only containment.", action: "CMM check, fixture wear log, first article comparison.", dev: "DEV260137", supplier: "Northline", age: "23 Jul 26" },
-  { part: "34320-02", cases: 3, open: 0, reusable: 0, rejected: 3, root: "Crimp height", severity: "Critical", lesson: "Below-minimum crimp height is not reusable unless engineering releases a new verified limit.", action: "Reject lot, inspect tooling setting, document setup correction.", dev: "DEV250928", supplier: "Meiko", age: "11 Dec 25" },
-  { part: "88901-08", cases: 2, open: 1, reusable: 1, rejected: 0, root: "Contamination", severity: "Major", lesson: "Connector contamination can be conditionally reused only after cleaning validation.", action: "Clean sample, inspect pins, confirm contact resistance.", dev: "DEV250502", supplier: "Delta", age: "09 Nov 25" },
+  {
+    id: "53180-09",
+    name: "Bracket housing, left side",
+    supplier: "Aster Precision",
+    product: "Drive module A12",
+    customer: "Line 4 assembly",
+    recurrence: 6,
+    severity: "Critical",
+    reviewStatus: "Human review needed",
+    lastSeen: "2026-07-18",
+    confidence: "High match",
+    pattern: "Repeated surface crack after post-machining deburr and transport handling.",
+    issue: "Surface crack found around the inner radius. Previous cases show the same mark after the deburr step, then worsened during tray transport.",
+    solution: "Hold affected lot, inspect radius under 10x magnification, polish with controlled 500-grit pass, replace tray liner, then rerun final inspection.",
+    lesson: "If this repeats, do not treat it as a cosmetic defect first. Check deburr pressure, tray contact point, and radius inspection records before release.",
+    evidence: ["D-2026-001 CAPA extract", "Inspection photo set 53180-09", "Supplier 8D response"],
+    deviations: [
+      { id: "D-2026-001", date: "2026-07-18", issue: "Surface crack", action: "Lot hold + polish + tray liner change", status: "Open" },
+      { id: "D-2026-014", date: "2026-06-22", issue: "Radius crack indication", action: "100% visual sort", status: "Closed" },
+      { id: "D-2026-033", date: "2026-05-07", issue: "Post-deburr mark", action: "Deburr pressure reset", status: "Closed" },
+    ],
+  },
+  {
+    id: "80005-01",
+    name: "Seal carrier plate",
+    supplier: "Northline Components",
+    product: "Pump module P7",
+    customer: "Final test cell",
+    recurrence: 4,
+    severity: "Major",
+    reviewStatus: "Lesson approved",
+    lastSeen: "2026-07-09",
+    confidence: "Medium match",
+    pattern: "Dimension drift on slot width when tooling approaches scheduled changeover.",
+    issue: "Slot width measured over upper tolerance. Trend appears in the final 18% of tool life.",
+    solution: "Quarantine plates from the suspect tool window, run CMM confirmation, change tool early, and update sampling frequency near end of tool life.",
+    lesson: "When slot drift repeats, compare measurement time with tool-life counter before opening a new root-cause branch.",
+    evidence: ["CMM trend export", "Tool-life log", "Deviation D-2026-002"],
+    deviations: [
+      { id: "D-2026-002", date: "2026-07-09", issue: "Dimension out of spec", action: "CMM confirmation + early tool change", status: "Approved" },
+      { id: "D-2026-021", date: "2026-06-02", issue: "Slot width high", action: "Sampling frequency updated", status: "Closed" },
+    ],
+  },
+  {
+    id: "53196-05",
+    name: "Guide rail insert",
+    supplier: "Orchid Machining",
+    product: "Rail kit R3",
+    customer: "Incoming QA",
+    recurrence: 3,
+    severity: "Minor",
+    reviewStatus: "Draft lesson",
+    lastSeen: "2026-06-30",
+    confidence: "New grouping",
+    pattern: "Burr at locating edge after batch cleaning.",
+    issue: "Small burr found at the locating edge. It blocks smooth fixture seating during incoming check.",
+    solution: "Segregate affected boxes, add edge swipe inspection, ask supplier for deburr confirmation record, then approve only cleaned parts.",
+    lesson: "If a burr appears again, verify whether cleaning masked the deburr miss instead of assuming handling damage.",
+    evidence: ["Incoming QA images", "Supplier cleaning log", "D-2026-003 worksheet"],
+    deviations: [
+      { id: "D-2026-003", date: "2026-06-30", issue: "Burr found", action: "Supplier deburr confirmation", status: "Reviewing" },
+    ],
+  },
 ];
 
-const monthly = [18, 22, 16, 27, 21, 31, 25, 20];
-const rootCauses = [
-  ["Surface finish", 28, "#2563eb"],
-  ["Fixture drift", 23, "#7c3aed"],
-  ["Crack", 18, "#f97316"],
-  ["Crimp height", 14, "#ef4444"],
-  ["Contamination", 9, "#0ea5e9"],
-] as const;
-
-function Pill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "red" | "green" | "amber" | "blue" | "neutral" }) {
-  return <span className={`pill ${tone}`}>{children}</span>;
+function severityClass(severity: string) {
+  return severity.toLowerCase();
 }
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(parts[0]);
-  const filtered = useMemo(() => parts.filter((p) => `${p.part} ${p.root} ${p.dev} ${p.supplier}`.toLowerCase().includes(query.toLowerCase())), [query]);
+  const [selectedId, setSelectedId] = useState(parts[0].id);
 
-  useMemo(() => {
-    if (filtered.length > 0 && !filtered.find(p => p.part === selected.part)) {
-      setSelected(filtered[0]);
-    }
-  }, [filtered, selected]);
+  const filteredParts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return parts;
+    return parts.filter((part) =>
+      [part.id, part.name, part.supplier, part.pattern, part.issue].some((value) =>
+        value.toLowerCase().includes(q)
+      )
+    );
+  }, [query]);
 
-  const totals = useMemo(() => ({
-    cases: parts.reduce((sum, p) => sum + p.cases, 0),
-    open: parts.reduce((sum, p) => sum + p.open, 0),
-    reusable: parts.reduce((sum, p) => sum + p.reusable, 0),
-    rejected: parts.reduce((sum, p) => sum + p.rejected, 0),
-  }), []);
+  const selectedPart = parts.find((part) => part.id === selectedId) || filteredParts[0] || parts[0];
+  const totalDeviations = parts.reduce((sum, part) => sum + part.recurrence, 0);
+  const approvedLessons = parts.filter((part) => part.reviewStatus === "Lesson approved").length;
 
   return (
-    <main className="dashboard-shell">
-      <aside className="sidebar">
-        <div className="brand"><div className="brand-icon">FPC</div><div><b>Deviation Hub</b><span>Quality intelligence</span></div></div>
-        <nav>
-          <button className="active"><BarChart3 size={17}/>Overview</button>
-          <button><Package size={17}/>Part Risk</button>
-          <button><FileSearch size={17}/>Evidence</button>
-          <button><ShieldCheck size={17}/>Lessons</button>
+    <main className="app-shell">
+      <aside className="rail" aria-label="Workspace navigation">
+        <div className="brand-block">
+          <div className="brand-mark">FPC</div>
+          <div>
+            <strong>KnowledgeHub</strong>
+            <span>QMS intelligence</span>
+          </div>
+        </div>
+
+        <nav className="nav-stack">
+          <button className="nav-item active"><Package size={17} /> Part Intelligence</button>
+          <button className="nav-item"><AlertTriangle size={17} /> Review Queue</button>
+          <button className="nav-item"><BookOpen size={17} /> Approved Lessons</button>
+          <button className="nav-item"><Archive size={17} /> Evidence Library</button>
         </nav>
-        <div className="sidebar-card"><b>Data health</b><span>152 records indexed</span><span className="ok-dot">● SQLite connected</span></div>
+
+        <div className="sync-card">
+          <ShieldCheck size={18} />
+          <div>
+            <strong>Human approval required</strong>
+            <span>AI suggests grouping. Quality team approves reusable lessons.</span>
+          </div>
+        </div>
       </aside>
 
       <section className="workspace">
-        <header className="topbar">
-          <div><p>Manufacturing Quality Analytics</p><h1>Deviation statistics & part recurrence</h1></div>
-          <div className="actions"><button><RefreshCw size={16}/>Refresh</button><button className="primary"><Filter size={16}/>Filter report</button></div>
+        <header className="hero-panel">
+          <div>
+            <p className="kicker">Part-centric QMS workspace</p>
+            <h1>Click a part. See the problem, the fix, and what to do when it repeats.</h1>
+          </div>
+          <div className="operator-chip">Bao QA</div>
         </header>
 
-        <section className="kpi-grid">
-          <div className="kpi"><span>Total cases</span><strong>{totals.cases}</strong><em><TrendingUp size={15}/> +12% this quarter</em></div>
-          <div className="kpi"><span>Open review</span><strong>{totals.open}</strong><em className="warn"><Clock3 size={15}/> needs decision</em></div>
-          <div className="kpi"><span>Reusable lessons</span><strong>{totals.reusable}</strong><em className="good"><CheckCircle2 size={15}/> approved knowledge</em></div>
-          <div className="kpi"><span>Rejected</span><strong>{totals.rejected}</strong><em className="bad"><AlertTriangle size={15}/> hard stop cases</em></div>
+        <section className="search-section" aria-label="Part search">
+          <div className="search-box">
+            <Search size={20} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search part, supplier, issue, or deviation pattern"
+              aria-label="Search part intelligence"
+            />
+          </div>
+          <button className="filter-button"><Filter size={17} /> Filter</button>
         </section>
 
-        <section className="analytics-grid">
-          <div className="panel trend-panel">
-            <div className="panel-head"><div><h2>Deviation trend</h2><p>Cases found by recent import batches</p></div><Pill tone="blue">8 periods</Pill></div>
-            <div className="bars">{monthly.map((v, i) => <div className="bar-wrap" key={i}><div className="bar" style={{height: `${v * 4}px`}}/><span>{v}</span></div>)}</div>
-          </div>
-
-          <div className="panel root-panel">
-            <div className="panel-head"><div><h2>Top root causes</h2><p>Where recurrence concentrates</p></div></div>
-            <div className="cause-list">{rootCauses.map(([name, value, color]) => <div key={name} className="cause-row"><span>{name}</span><div><i style={{width: `${value * 3}px`, background: color}}/><b>{value}%</b></div></div>)}</div>
-          </div>
+        <section className="metrics-row" aria-label="Knowledge summary">
+          <div className="metric-card wide"><span>Tracked recurrence</span><strong>{totalDeviations}</strong><p>deviation links across selected parts</p></div>
+          <div className="metric-card"><span>Approved lessons</span><strong>{approvedLessons}</strong><p>ready for reuse</p></div>
+          <div className="metric-card"><span>Needs review</span><strong>{parts.length - approvedLessons}</strong><p>AI suggestions waiting</p></div>
         </section>
 
-        <section className="main-content">
-          <div className="panel part-table">
-            <div className="panel-head"><div><h2>Part recurrence leaderboard</h2><p>Click a part to view action knowledge</p></div><div className="search"><Search size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search part, DEV, supplier..." /></div></div>
-            <div className="table-head"><span>Part</span><span>Cases</span><span>Open</span><span>Root cause</span><span>Lesson status</span><span>Latest DEV</span></div>
-            {filtered.map((p) => <button key={p.part} className={`part-row ${selected.part === p.part ? "selected" : ""}`} onClick={() => setSelected(p)}>
-              <span><b>{p.part}</b><small>{p.supplier}</small></span><span>{p.cases}</span><span>{p.open}</span><span>{p.root}</span><span><Pill tone={p.reusable ? "green" : "red"}>{p.reusable ? "Reusable" : "Reject only"}</Pill></span><span>{p.dev}</span>
-            </button>)}
+        <section className="work-grid">
+          <div className="part-list-panel">
+            <div className="panel-heading">
+              <div><h2>Parts with recurrence</h2><p>This is the main product view, not a generic deviation table.</p></div>
+              <span>{filteredParts.length} parts</span>
+            </div>
+
+            <div className="part-list">
+              {filteredParts.map((part) => (
+                <button key={part.id} className={`part-row ${selectedPart.id === part.id ? "selected" : ""}`} onClick={() => setSelectedId(part.id)}>
+                  <div className="part-main">
+                    <span className="part-number">{part.id}</span>
+                    <strong>{part.name}</strong>
+                    <p>{part.pattern}</p>
+                  </div>
+                  <div className="part-meta">
+                    <span className={`severity ${severityClass(part.severity)}`}>{part.severity}</span>
+                    <span>{part.recurrence} cases</span>
+                    <ChevronRight size={16} />
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <aside className="panel knowledge-card">
-            <div className="panel-head"><div><h2>{selected.part}</h2><p>{selected.dev} · {selected.root}</p></div><Pill tone={selected.severity === "Critical" ? "red" : "amber"}>{selected.severity}</Pill></div>
-            <div className="knowledge-block"><span>Problem pattern</span><p>{selected.root} repeated in {selected.cases} case(s). Latest supplier: {selected.supplier}.</p></div>
-            <div className="knowledge-block"><span>Recommended action</span><p>{selected.action}</p></div>
-            <div className="knowledge-block highlight"><span>If similar case appears again</span><p>{selected.lesson}</p></div>
-            <div className="mini-stats"><div><b>{selected.reusable}</b><span>Reusable</span></div><div><b>{selected.rejected}</b><span>Rejected</span></div><div><b>{selected.open}</b><span>Open</span></div></div>
+          <aside className="intelligence-panel" aria-label="Selected part intelligence">
+            <div className="panel-topline">
+              <span className={`severity ${severityClass(selectedPart.severity)}`}>{selectedPart.severity}</span>
+              <span>{selectedPart.reviewStatus}</span>
+            </div>
+
+            <div className="part-title-block">
+              <span className="part-number large">{selectedPart.id}</span>
+              <h2>{selectedPart.name}</h2>
+              <p>{selectedPart.supplier} · {selectedPart.product} · {selectedPart.customer}</p>
+            </div>
+
+            <div className="recurrence-strip">
+              <div><strong>{selectedPart.recurrence}</strong><span>linked deviations</span></div>
+              <div><strong>{selectedPart.lastSeen}</strong><span>last seen</span></div>
+              <div><strong>{selectedPart.confidence}</strong><span>classifier match</span></div>
+            </div>
+
+            <div className="guidance-stack">
+              <article className="guidance-card problem"><header><AlertTriangle size={18} /><span>Vấn đề gặp phải</span></header><p>{selectedPart.issue}</p></article>
+              <article className="guidance-card action"><header><Wrench size={18} /><span>Cách giải quyết</span></header><p>{selectedPart.solution}</p></article>
+              <article className="guidance-card lesson"><header><CheckCircle2 size={18} /><span>Bài học nếu lặp lại</span></header><p>{selectedPart.lesson}</p></article>
+            </div>
+
+            <section className="timeline-section">
+              <h3>Deviation history</h3>
+              <div className="timeline-list">
+                {selectedPart.deviations.map((deviation) => (
+                  <div className="timeline-item" key={deviation.id}>
+                    <span>{deviation.date}</span>
+                    <div><strong>{deviation.id}</strong><p>{deviation.issue}</p><small>{deviation.action}</small></div>
+                    <em>{deviation.status}</em>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="evidence-section">
+              <h3>Evidence close to advice</h3>
+              {selectedPart.evidence.map((item) => (
+                <button className="evidence-link" key={item}><FileText size={16} /> {item}</button>
+              ))}
+            </section>
           </aside>
         </section>
       </section>
