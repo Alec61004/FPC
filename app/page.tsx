@@ -1,71 +1,74 @@
 "use client";
-import { useMemo, useState } from "react";
-import { AlertTriangle, BookOpen, CheckCircle2, Package, RefreshCw, Wrench } from "lucide-react";
+
+import { useState } from "react";
+import { Search, RotateCcw, FileText, Folder, HardDrive, RefreshCw, AlertTriangle, Wrench, CheckCircle2 } from "lucide-react";
 
 const parts = [
-  { id: "53180-09", name: "Bracket housing", supplier: "Aster Precision", severity: "Critical", cases: 6, trend: "Rising", root: "Surface Crack", action: "10x Mag Inspect + Polish", lesson: "Check deburr pressure before tray packaging." },
-  { id: "80005-01", name: "Seal carrier", supplier: "Northline", severity: "Major", cases: 4, trend: "Stable", root: "Fixture Drift", action: "CMM Confirm + Tool Swap", lesson: "End-of-life tool life frequency reset." },
-  { id: "53196-05", name: "Guide rail insert", supplier: "Orchid", severity: "Minor", cases: 3, trend: "Stable", root: "Edge Burr", action: "Edge swipe inspection", lesson: "Verify supplier deburr logs post-cleaning." },
+  { id: "70196-03", dev: "DEV260119", date: "17 Jan 25", issue: "Staking joint rotation", root: "Crack", status: "REUSABLE", action: "Consulted DC team, ordered new punch.", lesson: "Slight rotation is accepted if force limit (600-700 lbf) is maintained. Inspect radius under 10x magnification.", supplier: "Dong Tam", evidence: ["DEV260119.pdf", "DEV260119.docx"] }
 ];
 
 export default function Home() {
-  const [selected, setSelected] = useState(parts[0]);
+  const [selected] = useState(parts[0]);
 
   return (
-    <main className="shell">
-      <aside className="sidebar">
-        <div className="brand">KHUB QMS</div>
-        <nav>
-          <button className="active"><Package size={16}/>Command Center</button>
-          <button><AlertTriangle size={16}/>Review Queue</button>
-          <button><BookOpen size={16}/>Knowledge Base</button>
-        </nav>
-      </aside>
+    <main className="qms-shell">
+      <header className="qms-header">
+        <div className="logo"><span>◆</span> Deviation Knowledge Hub</div>
+        <div className="toolbar">
+          <button>Import</button><button>Import New</button><button>Data Folder</button><button><RefreshCw size={14}/>Refresh</button>
+          <div className="status"><span className="dot"></span>Connected | Records: 152</div>
+        </div>
+      </header>
 
-      <section className="workspace">
-        <header className="header">
-          <div><h1>Command Center</h1><p>Quality Intelligence & Deviation Recurrence</p></div>
-          <button className="refresh"><RefreshCw size={14}/>Update Now</button>
-        </header>
+      <div className="qms-main">
+        <aside className="qms-sidebar">
+          {["Keyword", "Part Number", "DEV ID", "Supplier", "Customer", "Root Cause"].map(f => (
+            <div key={f} className="filter-group">
+              <label>{f}</label>
+              <input placeholder={`Search ${f}...`} />
+            </div>
+          ))}
+          <div className="filter-actions">
+            <button className="btn-search">Search</button>
+            <button className="btn-reset">Reset</button>
+          </div>
+        </aside>
 
-        <section className="dashboard">
-          <div className="part-grid">
+        <section className="qms-content">
+          <div className="result-table">
+            <div className="table-head"><span>Part</span><span>DEV ID</span><span>Issue</span><span>Root Cause</span><span>Status</span></div>
             {parts.map(p => (
-              <div key={p.id} className={`part-card ${selected.id === p.id ? 'active' : ''}`} onClick={() => setSelected(p)}>
-                <div className="card-top">
-                  <span className={`pill ${p.severity.toLowerCase()}`}>{p.severity}</span>
-                  <span className="part-id">{p.id}</span>
-                </div>
-                <h3>{p.name}</h3>
-                <div className="card-meta"><span>{p.cases} cases</span><span>{p.root}</span></div>
+              <div key={p.id} className="row active">
+                <span>{p.id}</span><span>{p.dev}</span><span>{p.issue}</span><span>{p.root}</span>
+                <span className="pill green">{p.status}</span>
               </div>
             ))}
           </div>
 
-          <aside className="detail-panel">
-            <div className="detail-head">
-              <h2>{selected.id}</h2>
-              <p>{selected.name} · {selected.supplier}</p>
+          <div className="detail-view">
+            <div className="detail-nav">
+              <button>Open Detail</button><button>Open Folder</button><button>Open Word</button><button>Open PDF</button>
             </div>
-            
-            <div className="insight-block">
-              <label>Pattern Detected</label>
-              <p className="pattern-text">{selected.root} repeated in {selected.cases} occurrences.</p>
-            </div>
-
-            <div className="action-steps">
-              <div className="step">
-                <Wrench size={16} className="text-blue-500" />
-                <div><strong>Standard Action</strong><p>{selected.action}</p></div>
+            <div className="three-col">
+              <div className="col">
+                <h3><AlertTriangle size={16}/> VẤN ĐỀ ĐÃ GẶP</h3>
+                <p><strong>{selected.issue}</strong></p>
+                <p>Force limit 600-700 lbf exceeded, staking joint rotation and surface crack identified.</p>
               </div>
-              <div className="step lesson">
-                <CheckCircle2 size={16} className="text-green-500" />
-                <div><strong>Lesson Learned</strong><p>{selected.lesson}</p></div>
+              <div className="col">
+                <h3><Wrench size={16}/> CÁCH ĐÃ XỬ LÝ</h3>
+                <p>Ordered new punch, adjusted OD/backstop. Consulted DC team for force limit verification.</p>
+                <div className="result-box"><strong>Kết quả:</strong> Accepted condition.</div>
+              </div>
+              <div className="col lesson">
+                <h3><CheckCircle2 size={16}/> KINH NGHIỆM LẶP LẠI</h3>
+                <p>{selected.lesson}</p>
+                <small><strong>Phạm vi:</strong> {selected.id} staking joints</small>
               </div>
             </div>
-          </aside>
+          </div>
         </section>
-      </section>
+      </div>
     </main>
   );
 }
