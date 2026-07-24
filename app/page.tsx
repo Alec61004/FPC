@@ -1,4 +1,7 @@
-import { AlertTriangle, Archive, BookOpenCheck, ChevronDown, CircleDot, FileText, Filter, GitBranch, LayoutGrid, MessageSquareText, MoreHorizontal, PackageSearch, Search, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { AlertTriangle, Archive, BookOpenCheck, ChevronDown, CircleDot, FileText, Filter, GitBranch, LayoutGrid, MessageSquareText, MoreHorizontal, PackageSearch, Search, ShieldCheck, Sparkles, TimerReset, X } from "lucide-react";
 
 const deviations = [
   { id: "DEV-2026-0142", part: "53180-09", title: "Surface crack after secondary machining", supplier: "Aster Precision", status: "In review", severity: "Critical", recurrence: 6, root: "Surface finish", lesson: "Approved reuse", age: "2h" },
@@ -20,16 +23,39 @@ function Badge({ children, tone = "slate" }: { children: React.ReactNode; tone?:
 }
 
 export default function Home() {
+  const [query, setQuery] = useState("53180-09");
+  const [filterRepeat, setFilterRepeat] = useState(false);
+  const [filterCritical, setFilterCritical] = useState(false);
+  const [selected, setSelected] = useState(deviations[0]);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [activeNav, setActiveNav] = useState("Workspace");
+
+  const filteredDeviations = useMemo(() => {
+    return deviations.filter((d) => {
+      const text = `${d.id} ${d.part} ${d.title} ${d.supplier} ${d.root}`.toLowerCase();
+      const matchesQuery = !query.trim() || text.includes(query.toLowerCase());
+      const matchesCritical = !filterCritical || d.severity === "Critical";
+      const matchesRepeat = !filterRepeat || d.recurrence > 1;
+      return matchesQuery && matchesCritical && matchesRepeat;
+    });
+  }, [query, filterCritical, filterRepeat]);
+
   return (
     <main className="shell">
       <aside className="rail">
         <div className="brand"><div className="brand-mark">K</div><div><b>KnowledgeHub</b><span>QMS Intelligence</span></div></div>
         <nav className="nav-stack">
-          <a className="active"><LayoutGrid size={16}/>Workspace</a>
-          <a><PackageSearch size={16}/>Part Intelligence</a>
-          <a><Archive size={16}/>Deviation Archive</a>
-          <a><BookOpenCheck size={16}/>Lessons Learned</a>
-          <a><GitBranch size={16}/>Review Queue</a>
+          {[
+            ["Workspace", LayoutGrid],
+            ["Part Intelligence", PackageSearch],
+            ["Deviation Archive", Archive],
+            ["Lessons Learned", BookOpenCheck],
+            ["Review Queue", GitBranch],
+          ].map(([label, Icon]) => (
+            <button key={label as string} className={activeNav === label ? "active" : ""} onClick={() => setActiveNav(label as string)}>
+              <Icon size={16}/>{label as string}
+            </button>
+          ))}
         </nav>
         <div className="rail-card">
           <Sparkles size={16}/>
@@ -41,7 +67,7 @@ export default function Home() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Deviation Knowledge System</p>
+            <p className="eyebrow">Deviation Knowledge System · {activeNav}</p>
             <h1>Part-centric QMS command center</h1>
           </div>
           <button className="ghost"><ShieldCheck size={16}/> Audit ready</button>
@@ -49,12 +75,17 @@ export default function Home() {
 
         <section className="hero-card">
           <div className="search-panel">
-            <div className="search-box"><Search size={20}/><input placeholder="Search part, deviation ID, supplier, root cause..." defaultValue="53180-09"/></div>
-            <div className="quick-filters"><button><Filter size={14}/>Filter</button><button>Critical</button><button>Repeat only</button><button>Needs review</button></div>
+            <div className="search-box"><Search size={20}/><input placeholder="Search part, deviation ID, supplier, root cause..." value={query} onChange={(event) => setQuery(event.target.value)}/></div>
+            <div className="quick-filters">
+              <button onClick={() => { setFilterCritical(false); setFilterRepeat(false); setQuery(""); }}><Filter size={14}/>Clear</button>
+              <button className={filterCritical ? "selected" : ""} onClick={() => setFilterCritical((v) => !v)}>Critical</button>
+              <button className={filterRepeat ? "selected" : ""} onClick={() => setFilterRepeat((v) => !v)}>Repeat only</button>
+              <button onClick={() => { setQuery("review"); setFilterCritical(false); }}>Needs review</button>
+            </div>
           </div>
           <div className="part-summary">
-            <div><p className="eyebrow">Selected part</p><h2>53180-09</h2></div>
-            <div className="metric-row"><div><b>6</b><span>deviations</span></div><div><b>2</b><span>approved lessons</span></div><div><b>86%</b><span>match confidence</span></div></div>
+            <div><p className="eyebrow">Selected part</p><h2>{selected.part}</h2></div>
+            <div className="metric-row"><div><b>{selected.recurrence}</b><span>deviations</span></div><div><b>{selected.lesson.includes("Approved") ? 2 : 1}</b><span>approved lessons</span></div><div><b>{selected.lesson.includes("Approved") ? "86%" : "64%"}</b><span>match confidence</span></div></div>
           </div>
         </section>
 
@@ -69,8 +100,9 @@ export default function Home() {
           <div className="issue-board">
             <div className="section-head"><div><h3>Deviation records</h3><p>Plane-style issue table adapted for QMS review.</p></div><button className="ghost">View <ChevronDown size={14}/></button></div>
             <div className="table">
-              {deviations.map((d) => (
-                <div className="row" key={d.id}>
+              {filteredDeviations.length === 0 && <div className="empty-state">No matching deviations. Try clearing filters.</div>}
+              {filteredDeviations.map((d) => (
+                <button className={`row ${selected.id === d.id ? "selected-row" : ""}`} key={d.id} onClick={() => { setSelected(d); setDrawerOpen(true); }}>
                   <div className="id"><AlertTriangle size={15}/>{d.id}</div>
                   <div className="title"><b>{d.title}</b><span>{d.supplier} · root cause: {d.root}</span></div>
                   <Badge tone={d.severity === "Critical" ? "red" : d.severity === "Major" ? "amber" : "green"}>{d.severity}</Badge>
@@ -79,20 +111,22 @@ export default function Home() {
                   <Badge tone={d.lesson.includes("Approved") ? "green" : "blue"}>{d.lesson}</Badge>
                   <span className="age">{d.age}</span>
                   <MoreHorizontal size={16}/>
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
-          <aside className="insight-panel">
-            <div className="section-head"><div><h3>Part intelligence</h3><p>What to do if it repeats again.</p></div></div>
-            <div className="recommendation"><Badge tone="blue">Recommended handling</Badge><h4>Reuse existing surface-finish containment, but require extra verification if crack depth exceeds prior scope.</h4><p>Based on 6 deviation sources and 2 approved lessons for part 53180-09.</p></div>
-            <div className="patterns">
-              <h4>Recurring patterns</h4>
-              {patterns.map((p) => <div className="pattern" key={p.name}><span>{p.name}</span><Badge tone={p.tone}>{p.count}</Badge></div>)}
-            </div>
-            <div className="note"><MessageSquareText size={16}/><p>AI can draft a lesson update, but reviewer approval is required before reuse.</p></div>
-          </aside>
+          {drawerOpen && (
+            <aside className="insight-panel">
+              <div className="section-head"><div><h3>Part intelligence</h3><p>{selected.id} · {selected.part}</p></div><button className="icon-button" onClick={() => setDrawerOpen(false)} aria-label="Close part intelligence"><X size={16}/></button></div>
+              <div className="recommendation"><Badge tone="blue">Recommended handling</Badge><h4>{selected.severity === "Critical" ? "Contain current lot, reuse approved surface-finish lesson, and require added depth verification." : "Compare scope against prior lessons before reuse; open update proposal if process conditions differ."}</h4><p>Based on {selected.recurrence} deviation source(s), root cause family “{selected.root}”, and current status “{selected.status}”.</p></div>
+              <div className="patterns">
+                <h4>Recurring patterns</h4>
+                {patterns.map((p) => <div className="pattern" key={p.name}><span>{p.name}</span><Badge tone={p.tone}>{p.count}</Badge></div>)}
+              </div>
+              <div className="note"><MessageSquareText size={16}/><p>AI can draft a lesson update for {selected.part}, but reviewer approval is required before reuse.</p></div>
+            </aside>
+          )}
         </section>
       </section>
     </main>
