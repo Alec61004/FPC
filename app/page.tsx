@@ -26,8 +26,15 @@ function Pill({ children, tone = "neutral" }: { children: React.ReactNode; tone?
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(parts[1]);
+  const [selected, setSelected] = useState(parts[0]);
   const filtered = useMemo(() => parts.filter((p) => `${p.part} ${p.root} ${p.dev} ${p.supplier}`.toLowerCase().includes(query.toLowerCase())), [query]);
+
+  // Sync selected if it gets filtered out
+  useMemo(() => {
+    if (filtered.length > 0 && !filtered.find(p => p.part === selected.part)) {
+      setSelected(filtered[0]);
+    }
+  }, [filtered, selected]);
 
   const totals = useMemo(() => ({
     cases: parts.reduce((sum, p) => sum + p.cases, 0),
