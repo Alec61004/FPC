@@ -1,54 +1,88 @@
 "use client";
-import { useState, useMemo } from "react";
-import { AlertTriangle, Wrench, CheckCircle2, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Search, Package, AlertTriangle, BookOpen, ChevronRight, FileText, Folder, RefreshCw, BarChart3, ShieldCheck } from "lucide-react";
 
-const parts = [
-  { id: "70196-03", dev: "DEV260119", date: "17 Jan 25", issue: "Staking joint rotation", root: "Crack", status: "REUSABLE", action: "Consulted DC team, ordered new punch.", lesson: "Slight rotation is accepted if force limit (600-700 lbf) is maintained. Inspect radius.", supplier: "Dong Tam" },
-  { id: "53180-09", dev: "DEV260142", date: "24 Jul 26", issue: "Surface finish crack", root: "Surface Crack", status: "REUSABLE", action: "Contain lot, inspect crack depth.", lesson: "Check deburr pressure before tray packaging." },
-  { id: "80005-01", dev: "DEV260137", date: "23 Jul 26", issue: "Slot width drift", root: "Fixture Drift", status: "REJECTED", action: "CMM check, fixture wear log.", lesson: "End-of-life tool life frequency reset." }
+// Dữ liệu mẫu (sẽ thay bằng data thật)
+const stats = [
+  { label: "Total DEV", value: "1,204", icon: BarChart3 },
+  { label: "Repeat Parts", value: "48", icon: Package },
+  { label: "Critical", value: "12", icon: AlertTriangle },
+  { label: "Lessons", value: "85", icon: BookOpen },
 ];
 
-export default function Home() {
-  const [selected, setSelected] = useState(parts[0]);
-  const [filter, setFilter] = useState("");
-
-  const filtered = useMemo(() => parts.filter(p => p.id.includes(filter) || p.issue.toLowerCase().includes(filter.toLowerCase())), [filter]);
+export default function DeviationDashboard() {
+  const [selectedPart, setSelectedPart] = useState(null);
 
   return (
-    <main className="qms-shell">
-      <header className="qms-header">
-        <div className="logo"><span>◆</span> Deviation Knowledge Hub</div>
-        <div className="toolbar">
-          <button onClick={() => alert("Importing...")}>Import</button>
-          <button onClick={() => location.reload()}><RefreshCw size={14}/>Refresh</button>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Top Bar */}
+      <header className="bg-slate-900 text-white p-3 flex justify-between items-center shadow-md">
+        <div className="flex items-center gap-2 font-bold text-lg"><ShieldCheck className="text-blue-400" /> Deviation Knowledge Hub</div>
+        <div className="flex gap-2 text-sm text-slate-300">
+          <button className="hover:text-white flex items-center gap-1"><RefreshCw size={14}/> Refresh</button>
+          <span>Connected</span>
         </div>
       </header>
-      <div className="qms-main">
-        <aside className="qms-sidebar">
-          <div className="filter-group">
-            <label>Keyword Search</label>
-            <input placeholder="Search..." onChange={(e) => setFilter(e.target.value)} />
-          </div>
-        </aside>
-        <section className="qms-content">
-          <div className="result-table">
-            <div className="table-head"><span>Part</span><span>DEV ID</span><span>Issue</span><span>Root Cause</span><span>Status</span></div>
-            {filtered.map(p => (
-              <button key={p.id} className={`row ${selected.id === p.id ? 'active' : ''}`} onClick={() => setSelected(p)}>
-                <span>{p.id}</span><span>{p.dev}</span><span>{p.issue}</span><span>{p.root}</span>
-                <span className={`pill ${p.status === 'REUSABLE' ? 'green' : 'red'}`}>{p.status}</span>
-              </button>
-            ))}
-          </div>
-          <div className="detail-view">
-            <div className="three-col">
-              <div className="col"><h3><AlertTriangle size={16}/> VẤN ĐỀ ĐÃ GẶP</h3><p>{selected.issue}</p></div>
-              <div className="col"><h3><Wrench size={16}/> CÁCH ĐÃ XỬ LÝ</h3><p>{selected.action}</p></div>
-              <div className="col lesson"><h3><CheckCircle2 size={16}/> KINH NGHIỆM LẶP LẠI</h3><p>{selected.lesson}</p></div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-4 gap-4 p-4">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center gap-4">
+            <s.icon className="text-blue-600" />
+            <div>
+              <div className="text-xs text-slate-500 uppercase">{s.label}</div>
+              <div className="text-xl font-bold">{s.value}</div>
             </div>
           </div>
-        </section>
+        ))}
       </div>
-    </main>
+
+      {/* Main Layout 3 Columns */}
+      <main className="grid grid-cols-12 gap-4 px-4 pb-4 h-[calc(100vh-180px)]">
+        {/* Left Filter */}
+        <aside className="col-span-2 bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <h3 className="font-bold mb-4">Search & Filter</h3>
+          <div className="space-y-3 text-sm">
+            <input className="w-full border p-2 rounded" placeholder="Keyword..." />
+            <input className="w-full border p-2 rounded" placeholder="Part Number..." />
+            <button className="w-full bg-blue-600 text-white p-2 rounded font-bold">Search</button>
+          </div>
+        </aside>
+
+        {/* Center Grid */}
+        <section className="col-span-7 bg-white rounded-lg shadow-sm border border-slate-200 p-4 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-2 text-left">Part ID</th>
+                <th className="p-2 text-left">DEV ID</th>
+                <th className="p-2 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1,2,3].map((i) => (
+                <tr key={i} className="border-t hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedPart(i as any)}>
+                  <td className="p-2">70196-0{i}</td>
+                  <td className="p-2">DEV2601{i}</td>
+                  <td className="p-2"><span className="bg-green-100 text-green-700 px-2 rounded">Active</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Right Preview */}
+        <aside className="col-span-3 bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <h3 className="font-bold mb-4">Evidence Preview</h3>
+          <div className="bg-slate-100 h-48 flex items-center justify-center rounded">
+            <FileText size={48} className="text-slate-400" />
+          </div>
+          <div className="mt-4 space-y-2">
+            <button className="w-full border p-2 rounded text-left flex items-center gap-2"><Folder size={16}/> Open Folder</button>
+            <button className="w-full border p-2 rounded text-left flex items-center gap-2"><FileText size={16}/> View PDF</button>
+          </div>
+        </aside>
+      </main>
+    </div>
   );
 }
