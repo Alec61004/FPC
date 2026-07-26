@@ -7,17 +7,16 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Deviation Knowledge Hub",
-  description: "Deltrol Controls deviation knowledge hub",
+  title: "Deltrol Controls | Deviation Knowledge Hub",
+  description: "Internal engineering tool for deviation management",
 };
 
 function Logo() {
   return (
-    <div className="flex items-center gap-3">
-      <div className="grid h-10 w-10 place-items-center rounded bg-white font-black text-[#14284B]">DC</div>
+    <div className="flex items-center gap-3 select-none">
+      <div className="grid h-10 w-10 place-items-center rounded bg-white font-black text-[#14284B] shadow-inner">DC</div>
       <div className="leading-tight">
-        <div className="text-[18px] font-extrabold">Deviation Knowledge Hub</div>
-        <div className="text-[10px] font-semibold tracking-[0.18em] text-white/70">DELTROL CONTROLS</div>
+        <div className="text-[11px] font-black tracking-[0.2em] text-white">DELTROL CONTROLS</div>
       </div>
     </div>
   );
@@ -26,25 +25,25 @@ function Logo() {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>
-        <div className="min-h-[100dvh] bg-[#F4F6F9] text-[#1A2333]">
-          <header className="flex h-[72px] items-center justify-between bg-[#14284B] px-5 text-white shadow-sm">
+      <body className="antialiased">
+        <div className="flex min-h-screen flex-col bg-[#F4F7FA]">
+          <header className="sticky top-0 z-50 flex h-[72px] shrink-0 items-center justify-between bg-[#14284B] px-6 text-white shadow-md">
             <Logo />
-            <nav className="flex items-center gap-1 text-[13px] font-medium">
-              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Dashboard</Link>
-              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/parts">Deviations</Link>
-              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/parts">Parts</Link>
-              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Reports/Analytics</Link>
-              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Settings</Link>
+            <nav className="flex items-center gap-2">
+              <Link href="/dashboard" className="rounded-md px-4 py-2 text-[13px] font-bold transition-all hover:bg-white/10">Dashboard</Link>
+              <Link href="/" className="rounded-md bg-white/15 px-4 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-white/20">Parts</Link>
             </nav>
-            <div className="hidden xl:flex items-center gap-4 text-xs text-white/80">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400"/>Connected</span>
-              <span>Records: 152</span>
-              <button className="rounded border border-white/20 px-2 py-1 hover:bg-white/10">Import</button>
-              <button className="rounded border border-white/20 px-2 py-1 hover:bg-white/10">Refresh</button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-400">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
+                Connected
+              </div>
+              <button className="rounded-md border border-white/20 px-3 py-1.5 text-[12px] font-bold transition-all hover:bg-white/10">Refresh</button>
             </div>
           </header>
-          {children}
+          <main className="flex-1 overflow-hidden">
+            {children}
+          </main>
         </div>
       </body>
     </html>
