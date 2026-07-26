@@ -5,21 +5,28 @@ import "./globals.css";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="font-sans bg-[#F4F7FB] text-[#1A2333]">
-        <header className="h-[72px] bg-[#14284B] flex items-center px-4 shadow-md">
-           {/* Logo Deltrol Controls lockup would go here */}
-           <div className="text-white font-bold text-xl tracking-tight">DELTROL CONTROLS</div>
+      <body>
+        <header className="app-topbar">
+          <div className="brand-lockup">
+            <div className="brand-mark">DC</div>
+            <div className="brand-text"><b>Deltrol</b><span>CONTROLS</span></div>
+          </div>
+          <div className="topbar-spacer" />
+          <button className="topbar-btn">Import</button>
+          <button className="topbar-btn">Import New</button>
+          <button className="topbar-btn">Data Folder</button>
+          <button className="topbar-btn">Refresh</button>
+          <div className="connected"><span />Connected</div>
+          <div className="data-source">R2 raw: deviation-raw/2024-2026 • Supabase lessons</div>
+          <div className="utility-icons">○ ? 👤 ⚙</div>
         </header>
-        <div className="flex h-[calc(100vh-72px)]">
-          <nav className="w-16 bg-[#14284B] flex flex-col items-center py-6 gap-6">
-            <Link href="/" className="text-white hover:text-white/80 text-xs text-center flex flex-col gap-1">
-               <div className="w-8 h-8 rounded bg-white/20" /> Dashboard
-            </Link>
-            <Link href="/parts" className="text-white hover:text-white/80 text-xs text-center flex flex-col gap-1">
-               <div className="w-8 h-8 rounded bg-white/20" /> Parts
-            </Link>
+        <div className="app-shell">
+          <nav className="app-sidebar">
+            <div className="sidebar-brand"><div className="brand-mark small">DC</div><span>DELTROL<br/>CONTROLS</span></div>
+            <Link href="/" className="side-link active"><span className="side-icon">▦</span>Dashboard</Link>
+            <Link href="/parts" className="side-link"><span className="side-icon">▣</span>Parts</Link>
           </nav>
-          <main className="flex-1 overflow-hidden">{children}</main>
+          <main className="app-main">{children}</main>
         </div>
       </body>
     </html>
