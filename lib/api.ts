@@ -10,6 +10,8 @@ export type DeviationRecord = {
   product?: string;
   issue?: string;
   defect_description?: string;
+  description?: string | Record<string, any>;
+  business_key?: string;
   what_happened?: string;
   what_was_done?: string;
   what_to_remember?: string;
@@ -37,8 +39,8 @@ export type DeviationRecord = {
 export type EvidenceFile = { id?: string; filename?: string; name?: string; url?: string; signed_url?: string; media_type?: string; size?: number; modified?: string; created_at?: string };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_URL is not configured");
-  const res = await fetch(`${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) }, cache: "no-store" });
+  const endpoint = `${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`;
+  const res = await fetch(endpoint, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) }, cache: "no-store" });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -48,10 +50,16 @@ export async function getPartDeviations(part: string): Promise<DeviationRecord[]
 export async function getEvidence(id: string): Promise<EvidenceFile[]> { return request<EvidenceFile[]>(`/api/evidence/${encodeURIComponent(id)}`); }
 export async function getMeta(name: string): Promise<string[]> { return request<string[]>(`/api/meta/${name}`); }
 
-export function fieldPart(r: DeviationRecord) { return r.part || r.part_no || r.part_number || "UNKNOWN"; }
-export function fieldDev(r: DeviationRecord) { return r.deviation_id || r.dev_code || r.id || "DEV"; }
-export function fieldIssue(r: DeviationRecord) { return r.issue || r.what_happened || r.defect_description || "No issue text"; }
-export function fieldAction(r: DeviationRecord) { return r.what_was_done || r.actions || r.action_test || r.conclusion || "No action text"; }
-export function fieldLesson(r: DeviationRecord) { return r.what_to_remember || r.key_lesson || r.reusable_for || "No lesson text"; }
+
+export function desc(r: DeviationRecord): Record<string, any> {
+  if (!r.description) return {};
+  try { return typeof r.description === "string" ? JSON.parse(r.description) : r.description as any; } catch { return {}; }
+}
+
+export function fieldPart(r: DeviationRecord) { const d=desc(r); return r.part || r.part_no || r.part_number || d.Part || (r.business_key||"").split("|")[1] || "UNKNOWN"; }
+export function fieldDev(r: DeviationRecord) { const d=desc(r); return r.deviation_id || r.dev_code || d["Deviation ID"] || (r.business_key||"").split("|")[0] || r.id || "DEV"; }
+export function fieldIssue(r: DeviationRecord) { const d=desc(r); return r.issue || r.what_happened || r.defect_description || d.Issue || "No issue text"; }
+export function fieldAction(r: DeviationRecord) { const d=desc(r); return r.what_was_done || r.actions || r.action_test || r.conclusion || d["Actions / Process"] || d.Solution || "No action text"; }
+export function fieldLesson(r: DeviationRecord) { const d=desc(r); return r.what_to_remember || r.key_lesson || r.reusable_for || d.Conclusion || "No lesson text"; }
 export function fieldStatus(r: DeviationRecord) { return r.status_detail || r.status || "Reviewed"; }
-export function fieldDate(r: DeviationRecord) { return r.date || r.deviation_date || (r.created_at || "").slice(0,10) || "-"; }
+export function fieldDate(r: DeviationRecord) { const d=desc(r); return r.date || r.deviation_date || d.Date || (r.created_at || "").slice(0,10) || "-"; }
