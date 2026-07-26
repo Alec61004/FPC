@@ -1,1 +1,40 @@
-export default function PartsPage(){return(<div className="parts-page"><aside className="kh-card p-4"><h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-4">Search & Filter</h2><div className="space-y-4"><input className="w-full rounded border border-[#dbe5ef] px-3 py-2 text-sm" placeholder="Part or Dev ID..."/><div className="grid grid-cols-2 gap-2"><button className="btn-eng btn-eng-primary">Search</button><button className="btn-eng btn-eng-outline">Reset</button></div></div><div className="kh-card p-4 mt-4"><h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-4">PART INFO</h2><div className="text-sm text-slate-700 space-y-3"><div><div className="text-[11px] uppercase text-slate-500 font-bold">Selected Part</div><div>-</div></div><div><div className="text-[11px] uppercase text-slate-500 font-bold">Related Cases</div><div>0</div></div></div></div></aside><section className="kh-card overflow-hidden"><div className="panel-head"><h2>Deviation Results</h2><div className="text-xs text-slate-500 font-semibold">Total: 0</div></div><div className="p-4 text-slate-400 text-center">Loading records...</div><div className="p-4 flex gap-3 border-t border-[#edf2f7]"><button className="btn-eng btn-eng-primary">Open Detail</button><button className="btn-eng btn-eng-outline">Open Folder</button><button className="btn-eng btn-eng-outline">Open Word</button><button className="btn-eng btn-eng-outline">Open PDF</button><button className="btn-eng btn-eng-outline ml-auto">Export Full Data</button></div></section><aside className="kh-card p-0 overflow-hidden"><div className="panel-head"><h2>Evidence Preview</h2></div><div className="evidence-list"><div className="evidence-list-header"><span>Name</span><span>Type</span><span>Folder</span><span>Size</span></div><div className="evidence-list-item"><span>DEV260119_Approval.pdf</span><span>PDF</span><span>Source</span><span>2.1MB</span></div><div className="evidence-list-item"><span>DEV260119_Dimension.png</span><span>PNG</span><span>Source</span><span>800KB</span></div><div className="evidence-list-item"><span>DEV260119_Report.docx</span><span>DOCX</span><span>Source</span><span>1.5MB</span></div></div><div className="p-4"><div className="mb-2 text-sm font-bold text-slate-500">Preview of: DEV260119_Approval.pdf</div><div className="w-full h-[150px] bg-slate-100 rounded flex items-center justify-center text-slate-400">Document Preview Area</div></div></aside></div>)}
+export default function PartsPage(){
+  return (
+    <div className="parts-screen">
+      <aside className="parts-filter">
+        <div className="filter-title">Search & Filter</div>
+        {['Keyword','Part Number','DEV ID','Supplier','Customer'].map((x,i)=>(
+          <label className="filter-field" key={x}><span>{x}</span><input placeholder={i===0?'crimp reject supplier...':''}/></label>
+        ))}
+        {['Root Cause','Review Decision','Review Status'].map(x=>(
+          <label className="filter-field" key={x}><span>{x}</span><select><option>All</option></select></label>
+        ))}
+        <div className="filter-actions"><button className="btn-solid">Search</button><button className="btn-light">Reset</button></div>
+      </aside>
+
+      <section className="parts-content">
+        <div className="results-head">
+          <div><h1>Results (1)</h1><p>Part <b>34320-02</b> • 1 case(s) • Process variation.</p></div>
+        </div>
+        <div className="action-row"><button>Open Detail</button><button>Open Folder</button><button>Open Word</button><button>Open PDF</button><button>Open Evidence</button><button className="ml-auto">Export Full Data</button></div>
+        <div className="result-table-wrap">
+          <table className="result-table"><thead><tr><th>Part</th><th>DEV ID</th><th>Issue</th><th>Root Cause</th><th>Decision</th><th>Status</th><th>Lesson Code</th></tr></thead><tbody>
+            <tr><td><a>34320-02</a></td><td>DEV250928</td><td>Crimp height below minimum</td><td>Process variation</td><td>REJECT</td><td><span className="pill rejected">REJECTED</span></td><td>LL-00022</td></tr>
+          </tbody></table>
+        </div>
+        <div className="lesson-grid">
+          <article className="lesson-card issue"><div className="num">1</div><h2>Vấn đề đã gặp</h2><h3>What happened?</h3><p>Crimp height below minimum. Below control limit. Cannot verify stable crimp performance.</p><ul><li>Reject lot</li><li>Notify supplier</li><li>Request corrective action</li></ul></article>
+          <article className="lesson-card action"><div className="num">2</div><h2>Cách đã xử lý</h2><h3>What was done?</h3><ul><li>Reject lot</li><li>Notify supplier</li><li>Request corrective action</li></ul><div className="result-box"><b>Kết quả / Result</b><span>Rejected due to functional risk.</span></div></article>
+          <article className="lesson-card lesson"><div className="num">3</div><h2>Kinh nghiệm khi lập lại</h2><h3>What to do next time?</h3><p>Do not reuse without new crimp validation.</p><div className="mini-box"><b>Phạm vi áp dụng</b><span>Rejected condition</span></div><div className="mini-box"><b>Cần kiểm tra lại</b><span>Pull test, Crimp cross-section</span></div></article>
+        </div>
+      </section>
+
+      <aside className="evidence-panel">
+        <div className="evidence-head"><h2>Evidence</h2><span>R2 preview</span></div>
+        <input className="evidence-search" placeholder="Search evidence..." />
+        <div className="file-row selected"><div><b>crimp_height_report.pdf</b><span>PDF • 220 KB • 28 Sep 25</span></div></div>
+        <div className="pdf-preview"><div className="pdf-page"><h3>Fluid Power & Controls Co., Ltd.</h3><p>Crimp height inspection report</p><div className="pdf-line"/><div className="pdf-line short"/><div className="pdf-table"><span>Part</span><b>34320-02</b><span>Result</span><b>Rejected</b></div></div><div className="pdf-nav">‹ Page 1 / 2 ›</div></div>
+      </aside>
+    </div>
+  )
+}
