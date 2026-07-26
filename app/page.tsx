@@ -2,9 +2,17 @@
 import { useEffect, useState } from "react";
 import CreateDeviation from "./deviation/create";
 
+type Deviation = {
+  id: string;
+  business_key: string;
+  title: string | null;
+  description: string | null;
+  part_id: number | null;
+};
+
 export default function KnowledgeHub() {
-  const [list, setList] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [list, setList] = useState<Deviation[]>([]);
+  const [selected, setSelected] = useState<Deviation | null>(null);
 
   useEffect(() => {
     // Note: Use /api/deviations (relative) assuming Vercel rewrite or proxy to FastAPI backend
