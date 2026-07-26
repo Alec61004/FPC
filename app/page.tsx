@@ -4,61 +4,50 @@ import { useState, useEffect, useMemo } from "react";
 import { getDeviations, fieldStatus, type DeviationRecord } from "@/lib/api";
 import { fieldPart, fieldDev, fieldIssue, fieldAction, fieldLesson, fieldDate } from "@/lib/api";
 
-const MOCK_FALLBACK = {
-  issue: "Terminal thickness exceeds specification. During inspection, the crimp height was measured below the minimum allowed tolerance, resulting in potential mechanical failure.",
-  action: "Adjusted the crimp machine die settings and recalibrated the hydraulic pressure. Performed a 100% inspection on the remaining lot and updated the maintenance schedule for die components.",
-  lesson: "Always verify crimp height after die changes. If dimension variances occur, immediately check tooling wear and machine pressure. Document all dimensional data in the logbook.",
+// Fallback content to ensure UI is never empty for dashboard
+const MOCK_FALLBACK_DASHBOARD = {
+  issue: "Terminal thickness exceeds specification.",
+  action: "Adjusted crimp machine settings.",
+  lesson: "Always verify crimp height.",
 };
 
-const getIssue = (row: DeviationRecord) => fieldIssue(row) || MOCK_FALLBACK.issue;
-const getAction = (row: DeviationRecord) => fieldAction(row) || MOCK_FALLBACK.action;
-const getLesson = (row: DeviationRecord) => fieldLesson(row) || MOCK_FALLBACK.lesson;
-
-const MOCK_FILES = [
-  { name: "DEV260119_Approval.pdf", type: "PDF", folder: "Source", size: "2.1MB" },
-  { name: "DEV260119_Dimension.png", type: "PNG", folder: "Source", size: "800KB" },
-  { name: "DEV260119_Report.docx", type: "DOCX", folder: "Source", size: "1.5MB" },
-];
+const getIssue = (row: DeviationRecord) => fieldIssue(row) || MOCK_FALLBACK_DASHBOARD.issue;
+const getAction = (row: DeviationRecord) => fieldAction(row) || MOCK_FALLBACK_DASHBOARD.action;
+const getLesson = (row: DeviationRecord) => fieldLesson(row) || MOCK_FALLBACK_DASHBOARD.lesson;
 
 export default function DashboardPage() {
   const [data, setData] = useState<DeviationRecord[]>([]);
-  const [selected, setSelected] = useState<DeviationRecord | null>(null);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [activeEvidenceFile, setActiveEvidenceFile] = useState(MOCK_FILES[0]);
 
   useEffect(() => {
     setLoading(true);
     getDeviations().then(res => {
+      // Ensure some mock data if real data is empty for dashboard visualization
       const processedRes = res.length > 0 ? res : [
         {
-          part: "34320-02", dev_id: "DEV250928", issue: "Crimp height below minimum tolerance.", status: "REJECTED", date: "2024-07-25",
-          root_cause: "Improper die setting", action: "Recalibrated machine, inspected lot.", lesson: "Always check tooling wear.", part_id: 101
+          part: "34320-02", dev_id: "DEV250928", issue: MOCK_FALLBACK_DASHBOARD.issue, status: "REJECTED", date: "2024-07-25",
+          root_cause: "Improper die setting", action: MOCK_FALLBACK_DASHBOARD.action, lesson: MOCK_FALLBACK_DASHBOARD.lesson, part_id: 101
         },
         {
           part: "53180-09", dev_id: "DEV250929", issue: "Dimension out of spec.", status: "TEMPORARY / LOT-SPECIFIC", date: "2024-07-24",
-          root_cause: "Material variance", action: "Accepted current condition, reviewed backstop.", lesson: "Involve DC team for criteria.", part_id: 102
+          root_cause: "Material variance", action: "Accepted current condition.", lesson: "Involve DC team for criteria.", part_id: 102
         },
         {
           part: "88901-08", dev_id: "DEV250930", issue: "Missing evidence for test results.", status: "MISSING EVIDENCE", date: "2024-07-23",
           root_cause: "Data entry error", action: "Request source files from QC.", lesson: "Ensure all data is logged.", part_id: 103
+        },
+        {
+          part: "70196-03", dev_id: "DEV260119", issue: "Staking joint cracked.", status: "REUSABLE WITH CONDITIONS", date: "2024-07-22",
+          root_cause: "Tooling wear", action: "Adjusted punch, reviewed backstop.", lesson: "Document all decisions.", part_id: 104
+        },
+        {
+          part: "54101-09", dev_id: "DEV260120", issue: "Misaligned component.", status: "REUSABLE WITH CONDITIONS", date: "2024-07-21",
+          root_cause: "Assembly error", action: "Revised assembly jig.", lesson: "Train operators on new jig.", part_id: 105
         }
       ];
       setData(processedRes);
-      if (processedRes.length > 0) setSelected(processedRes[0]);
     }).finally(() => setLoading(false));
   }, []);
-
-  const filtered = useMemo(() => {
-    if (!search) return data;
-    const q = search.toLowerCase();
-    return data.filter(r => 
-      fieldPart(r).toLowerCase().includes(q) || 
-      fieldDev(r).toLowerCase().includes(q) ||
-      getIssue(r).toLowerCase().includes(q)
-    );
-  }, [data, search]);
 
   const getBadgeClass = (status: string) => {
     const s = status.toLowerCase();
@@ -69,124 +58,183 @@ export default function DashboardPage() {
     return "badge-gray";
   };
 
+  const stats = useMemo(() => ({
+    totalParts: new Set(data.map(fieldPart)).size,
+    totalCases: data.length,
+    repeatedIssueParts: new Set(data.filter(r => data.filter(d => fieldPart(d) === fieldPart(r)).length > 1).map(fieldPart)).size,
+    missingEvidence: data.filter(r => fieldStatus(r).toLowerCase().includes("missing evidence")).length,
+    temporaryLotSpecific: data.filter(r => fieldStatus(r).toLowerCase().includes("temporary") || fieldStatus(r).toLowerCase().includes("lot-specific")).length,
+    rejectedCases: data.filter(r => fieldStatus(r).toLowerCase().includes("rejected")).length,
+    reusableLessons: data.filter(r => fieldStatus(r).toLowerCase().includes("reusable")).length,
+    conditionalReuse: data.filter(r => fieldStatus(r).toLowerCase().includes("conditional reuse")).length,
+  }), [data]);
+
+  // Mock data for dashboard tables for visual consistency
+  const recentPartIssues = data.slice(0, 1);
+  const needReview = data.filter(r => (fieldStatus(r) || "").includes("REJECTED") || (fieldStatus(r) || "").includes("MISSING EVIDENCE") || (fieldStatus(r) || "").includes("TEMPORARY")).slice(0, 3);
+  const topRepeatedParts = Array.from(new Set(data.map(fieldPart)))
+    .map(part => ({ part, count: data.filter(r => fieldPart(r) === part).length, latestLesson: getLesson(data.find(r => fieldPart(r) === part) || data[0]) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+  const latestApprovedLessons = data.filter(r => (fieldStatus(r) || "").includes("REUSABLE")).slice(0, 2);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F4F7FB]">
-      <aside className="w-[280px] flex-shrink-0 border-r border-[#E2E8F0] bg-white p-6 overflow-y-auto">
-        <div className="kh-card p-4 mb-6">
-          <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-4">Search & Filter</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Keyword</label>
-              <input type="text" className="w-full rounded border border-[#E2E8F0] px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Part or Dev ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="btn-eng btn-eng-primary">Search</button>
-              <button className="btn-eng btn-eng-outline" onClick={() => setSearch("")}>Reset</button>
-            </div>
+    <div className="flex flex-col h-full bg-[#F4F7FB]">
+      <header className="px-8 py-6 bg-white border-b border-[#E2E8F0] shadow-sm">
+        <h1 className="text-2xl font-black text-[#1A2333]">Dashboard</h1>
+        <p className="text-sm text-[#64748B] mt-1">Part-centered deviation knowledge, lessons and evidence readiness.</p>
+      </header>
+      
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-500 uppercase">Filter applied: None</div>
+            <button className="btn-eng btn-eng-primary">Clear Filter</button>
           </div>
-        </div>
-        <div className="kh-card p-4">
-          <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-4">PART INFO</h2>
-          <div className="space-y-3">
-            <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Selected Part</label><p className="text-sm font-medium text-[#1A2333]">{selected ? fieldPart(selected) : '-'}</p></div>
-            <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Related Cases</label><p className="text-sm font-medium text-[#1A2333]">{selected ? data.filter(r => fieldPart(r) === fieldPart(selected)).length : 0}</p></div>
-          </div>
-        </div>
-      </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden p-6">
-        <div className="kh-card flex-1 flex flex-col overflow-hidden mb-6">
-          <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
-            <h2 className="text-base font-bold text-[#1A2333]">Deviation Results</h2>
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-              <span>Total: {filtered.length}</span>
-            </div>
+          {/* KPI Cards Grid */}
+          <div className="grid grid-cols-4 gap-6 mb-10">
+            <KpiCard title="TOTAL PARTS" value={stats.totalParts} sub="Part-centered library." />
+            <KpiCard title="TOTAL CASES" value={stats.totalCases} sub="Imported structured cases." />
+            <KpiCard title="REPEATED ISSUE PARTS" value={stats.repeatedIssueParts} sub="Watch these first." />
+            <KpiCard title="MISSING EVIDENCE" value={stats.missingEvidence} sub="Need review." highlight={stats.missingEvidence > 0} />
+            <KpiCard title="TEMPORARY / LOT SPECIFIC" value={stats.temporaryLotSpecific} sub="Batch only." />
+            <KpiCard title="REJECTED CASES" value={stats.rejectedCases} sub="Do not reuse." highlight={stats.rejectedCases > 0} />
+            <KpiCard title="REUSABLE LESSONS" value={stats.reusableLessons} sub="Approved knowledge." />
+            <KpiCard title="CONDITIONAL REUSE" value={stats.conditionalReuse} sub="Needs verification." />
           </div>
-          <div className="flex-1 overflow-auto">
-            <table className="table-eng w-full">
-              <thead>
-                <tr className="bg-slate-50 text-left text-xs uppercase text-slate-500 border-b border-slate-100">
-                  <th className="p-3">Part</th>
-                  <th className="p-3">Dev ID</th>
-                  <th className="p-3 min-w-[250px]">Issue</th>
-                  <th className="p-3 w-[150px]">Status</th>
-                  <th className="p-3 w-[100px]">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-slate-400">Loading records...</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-slate-400">No records found.</td></tr>
-                ) : filtered.map((row, idx) => (
-                  <tr key={idx} className={`cursor-pointer transition-colors hover:bg-slate-50 ${selected === row ? 'row-selected' : ''}`} onClick={() => setSelected(row)}>
-                    <td className="font-bold">{fieldPart(row)}</td>
-                    <td className="font-mono text-xs text-blue-700">{fieldDev(row)}</td>
-                    <td>{getIssue(row)}</td>
-                    <td><span className={`badge ${getBadgeClass(fieldStatus(row))}`}>{fieldStatus(row) || "MISSING EVIDENCE"}</span></td>
-                    <td className="text-xs text-slate-500">{fieldDate(row)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <div className="kh-card p-4 flex items-center gap-3">
-          <button className="btn-eng btn-eng-primary" onClick={() => setShowDetailModal(true)}>Open Detail</button>
-          <button className="btn-eng btn-eng-outline">Open Folder</button>
-          <div className="h-6 w-px bg-slate-200 mx-2"></div>
-          <button className="btn-eng btn-eng-outline">Open Word</button>
-          <button className="btn-eng btn-eng-outline">Open PDF</button>
-          <button className="btn-eng btn-eng-outline ml-auto">Export Full Data</button>
-        </div>
-      </main>
-
-      <aside className="w-[350px] flex-shrink-0 border-l border-[#E2E8F0] bg-white p-6 overflow-y-auto">
-        <div className="kh-card p-4 mb-6">
-          <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-4">Evidence Preview</h2>
-          <div className="evidence-toolbar mb-4 flex gap-2">
-            <input type="text" placeholder="Search files..." className="w-full rounded border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
-            <select className="rounded border border-slate-200 px-3 py-2 text-sm focus:outline-none">
-              <option>All</option>
-              <option>PDF</option>
-              <option>DOCX</option>
-              <option>PNG</option>
-            </select>
-          </div>
-          <div className="evidence-list">
-            <div className="evidence-list-header">
-              <span>Name</span><span>Type</span><span>Folder</span><span>Size</span>
-            </div>
-            {MOCK_FILES.map((f, i) => (
-              <div key={i} className={`evidence-list-item ${activeEvidenceFile.name === f.name ? 'row-selected' : ''}`} onClick={() => setActiveEvidenceFile(f)}>
-                <span>{f.name}</span><span>{f.type}</span><span>{f.folder}</span><span>{f.size}</span>
+          {/* Dashboard Tables */}
+          <div className="grid grid-cols-2 gap-8">
+            {/* Recent Part Issues */}
+            <div className="kh-card">
+              <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#1A2333]">Recent Part Issues</h3>
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="kh-card p-4 min-h-[150px] flex flex-col items-center justify-center">
-          <div className="text-sm font-bold text-slate-500 mb-2">Preview of: {activeEvidenceFile.name}</div>
-          <div className="w-full h-[100px] bg-slate-100 rounded flex items-center justify-center text-slate-400">Document Preview Area</div>
-        </div>
-      </aside>
+              <div className="p-4">
+                <table className="table-eng">
+                  <thead>
+                    <tr>
+                      <th>Part</th><th>Dev ID</th><th>Issue</th><th>Decision</th><th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentPartIssues.length === 0 ? (
+                      <tr><td colSpan={5} className="py-4 text-center text-slate-400">No recent issues.</td></tr>
+                    ) : recentPartIssues.map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="font-bold text-blue-700">{fieldPart(row)}</td>
+                        <td>{fieldDev(row)}</td>
+                        <td>{getIssue(row)}</td>
+                        <td>REJECT</td>
+                        <td><span className={`badge ${getBadgeClass(fieldStatus(row))}`}>{fieldStatus(row)}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-      {showDetailModal && selected && (
-        <div className="kh-modal-backdrop">
-          <div className="kh-modal">
-            <div className="kh-modal-header">
-              <h2 className="kh-modal-title">Case Detail | {fieldDev(selected)} | Part {fieldPart(selected)}</h2>
-              <button className="kh-modal-close" onClick={() => setShowDetailModal(false)}>×</button>
+            {/* Need Review */}
+            <div className="kh-card">
+              <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#1A2333]">Need Review</h3>
+                <span className="text-xs font-semibold text-slate-400">Filtered: reject</span>
+                <button className="btn-eng btn-eng-primary text-[10px] px-2 py-1">Evidence driven</button>
+              </div>
+              <div className="p-4">
+                <table className="table-eng">
+                  <thead>
+                    <tr>
+                      <th>Part</th><th>Reason</th><th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {needReview.length === 0 ? (
+                      <tr><td colSpan={3} className="py-4 text-center text-slate-400">No items for review.</td></tr>
+                    ) : needReview.map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="font-bold text-blue-700">{fieldPart(row)}</td>
+                        <td>{fieldStatus(row)}</td>
+                        <td>Review condition</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-6 mb-6">
-              <div className="detail-card border-l-orange-500"><h3>1. VẤN ĐỀ ĐÃ GẶP</h3><p>{getIssue(selected)}</p></div>
-              <div className="detail-card border-l-blue-500"><h3>2. CÁCH ĐÃ XỬ LÝ</h3><p>{getAction(selected)}</p></div>
-              <div className="detail-card border-l-emerald-500"><h3>3. KINH NGHIỆM KHI LẶP LẠI</h3><p>{getLesson(selected)}</p></div>
+
+            {/* Top Repeated Parts */}
+            <div className="kh-card">
+              <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#1A2333]">Top Repeated Parts</h3>
+                <span className="text-xs font-semibold text-slate-400">Click part to review</span>
+              </div>
+              <div className="p-4">
+                <table className="table-eng">
+                  <thead>
+                    <tr>
+                      <th>Part</th><th>Cases</th><th>Main Pattern</th><th>Latest Lesson</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topRepeatedParts.length === 0 ? (
+                      <tr><td colSpan={4} className="py-4 text-center text-slate-400">No repeated parts.</td></tr>
+                    ) : topRepeatedParts.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="font-bold text-blue-700">{item.part}</td>
+                        <td>{item.count}</td>
+                        <td>{getIssue(data.find(r => fieldPart(r) === item.part) || data[0])}</td>
+                        <td>{getLesson(data.find(r => fieldPart(r) === item.part) || data[0])}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="flex justify-end gap-3"><button className="btn-eng btn-eng-outline">View History</button><button className="btn-eng btn-eng-primary">Approve</button><button className="btn-eng btn-eng-outline">Edit</button><button className="btn-eng btn-eng-primary">Save</button></div>
+
+            {/* Latest Approved Lessons */}
+            <div className="kh-card">
+              <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[#1A2333]">Latest Approved Lessons</h3>
+                <span className="text-xs font-semibold text-slate-400">Reusable knowledge</span>
+              </div>
+              <div className="p-4">
+                <table className="table-eng">
+                  <thead>
+                    <tr>
+                      <th>Lesson</th><th>Part</th><th>Scope</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {latestApprovedLessons.length === 0 ? (
+                      <tr><td colSpan={3} className="py-4 text-center text-slate-400">No approved lessons.</td></tr>
+                    ) : latestApprovedLessons.map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="font-bold">{getLesson(row)}</td>
+                        <td className="font-bold text-blue-700">{fieldPart(row)}</td>
+                        <td>{getLesson(row)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ title, value, sub, highlight }: { title: string; value: number; sub: string; highlight?: boolean }) {
+  return (
+    <div className={`kh-card ${highlight ? 'border-blue-200 bg-blue-50' : ''}`}>
+      <div className="p-6">
+        <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-400">{title}</p>
+        <p className="text-4xl font-black text-[#1A2333]">{value}</p>
+        <p className="mt-1 text-xs text-[#64748B]">{sub}</p>
+      </div>
     </div>
   );
 }

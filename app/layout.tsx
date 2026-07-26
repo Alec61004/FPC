@@ -12,10 +12,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <div className="flex h-[calc(100vh-72px)]">
           <nav className="w-16 bg-[#14284B] flex flex-col items-center py-6 gap-6">
-            <Link href="/" className="text-white text-xs text-center flex flex-col gap-1">
-               <div className="w-8 h-8 rounded bg-white/10" /> Dashboard
+            <Link href="/" className="text-white hover:text-white/80 text-xs text-center flex flex-col gap-1">
+               <div className="w-8 h-8 rounded bg-white/20" /> Dashboard
             </Link>
-            <Link href="/parts" className="text-white text-xs text-center flex flex-col gap-1">
+            <Link href="/parts" className="text-white hover:text-white/80 text-xs text-center flex flex-col gap-1">
                <div className="w-8 h-8 rounded bg-white/20" /> Parts
             </Link>
           </nav>
