@@ -15,8 +15,9 @@ export default function KnowledgeHub() {
   const [selected, setSelected] = useState<Deviation | null>(null);
 
   useEffect(() => {
-    // Note: Use /api/deviations (relative) assuming Vercel rewrite or proxy to FastAPI backend
-    fetch("/api/deviations") 
+    // Gọi thẳng vào server FastAPI đang chạy local hoặc production
+    // Nếu deploy Vercel, anh cần đổi URL này thành URL của server backend đã deploy
+    fetch("http://localhost:8000/api/deviations") 
       .then(res => res.json())
       .then(data => setList(data))
       .catch(e => console.error("Fetch error:", e));
