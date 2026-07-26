@@ -1,34 +1,20 @@
 "use client";
-import { fetchApi } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { getDeviations, fieldAction, fieldDate, fieldDev, fieldIssue, fieldLesson, fieldPart, fieldStatus, type DeviationRecord } from "@/lib/api";
 
-export default function PartsListPage() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchApi("/deviations").then(data => {
-      setRows(data);
-      setLoading(false);
-    });
-  }, []);
-
-  return (
-    <main className="p-5">
-      {loading ? <div>Loading...</div> : (
-        <table className="w-full">
-          <thead><tr><th>DEV ID</th><th>Status</th></tr></thead>
-          <tbody>
-            {rows.map((c: any) => (
-              <tr key={c.dev_code}>
-                <td>{c.dev_code}</td>
-                <td>{c.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </main>
-  );
+const badge = (v:string)=>{
+  const s=(v||"").toUpperCase();
+  return s.includes("REJECT") ? "bg-[#FEE2E2] text-[#DC2626]" : s.includes("TEMP") || s.includes("BATCH") ? "bg-[#DBEAFE] text-[#1D4ED8]" : "bg-[#D1FAE5] text-[#047857]";
 }
+
+export default function PartsListPage(){
+  const [rows,setRows]=useState<DeviationRecord[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [q,setQ]=useState("");
+  const [selected,setSelected]=useState<DeviationRecord|null>(null);
+  const [quick,setQuick]=useState(false);
+  const filtered = useMemo(()=>rows.filter(r=>[fieldPart(r), fieldDev(r), fieldIssue(r), fieldStatus(r), fieldLesson(r)].join(' ').toLowerCase().includes(q.toLowerCase())), [rows,q]);
+  useEffect(()=>{ getDeviations().then(d=>{setRows(d); setSelected(d[0]||null);}).finally(()=>setLoading(false)); },[]);
+  return <main className="grid min-h-[calc(100dvh-72px)] grid-cols-[230px_1fr] overflow-hidden"><aside className="border-r border-[#E5E7EB] bg-white p-4"><div className="mb-4 text-[15px] font-bold text-[#14284B]">Search & Filter</div><label className="mb-3 block text-[12px] font-semibold text-[#374151]"><div className="mb-1">Keyword</div><input value={q} onChange={e=>setQ(e.target.value)} className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2" placeholder="Search..."/></label><button className="btn w-full">Search</button></aside><section className="overflow-y-auto p-5"><div className="rounded-xl border border-[#E5E7EB] bg-white shadow-sm"><div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3"><div className="text-[15px] font-bold text-[#14284B]">Results</div><div className="text-xs text-[#6B7280]">{filtered.length} records</div></div>{loading ? <div className="p-6 text-sm text-gray-500">Loading...</div> : <table className="w-full text-left text-[13px]"><thead className="bg-[#F8FAFC] text-[12px] text-[#6B7280]"><tr><th className="px-3 py-2">Part</th><th className="px-3 py-2">DEV ID</th><th className="px-3 py-2">Issue</th><th className="px-3 py-2">Root Cause</th><th className="px-3 py-2">Decision</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Lesson Code</th></tr></thead><tbody>{filtered.map((r,i)=><tr key={i} onClick={()=>setSelected(r)} className={`cursor-pointer border-t border-[#E5E7EB] ${selected===r?'bg-[#DBEAFE]':'hover:bg-[#EFF6FF]'}`}><td className="px-3 py-3 font-mono font-semibold text-[#1B4C8C]">{fieldPart(r)}</td><td className="px-3 py-3 font-mono font-semibold text-[#1B4C8C]">{fieldDev(r)}</td><td className="px-3 py-3">{fieldIssue(r)}</td><td className="px-3 py-3">{r.root_cause||'-'}</td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${badge(r.decision||r.status||'')}`}>{r.decision||'-'}</span></td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${badge(r.status||'')}`}>{fieldStatus(r)}</span></td><td className="px-3 py-3 font-mono">{r.lesson_code||'-'}</td></tr>)}</tbody></table>}<div className="flex flex-wrap gap-2 border-t border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3"><button onClick={()=>setQuick(true)} className="rounded bg-[#1B4C8C] px-3 py-2 font-semibold text-white">Open Detail</button><button className="btn">Open Folder</button><button className="btn">Open Word</button><button className="btn">Open PDF</button><button className="btn">Open Evidence</button>{selected && <Link className="ml-auto rounded border border-[#E5E7EB] bg-white px-3 py-2 font-semibold text-[#1B4C8C]" href={`/parts/${encodeURIComponent(fieldPart(selected))}`}>Go Part Detail</Link>}</div></div>{quick && selected && <div className="fixed inset-0 z-50 grid place-items-center bg-black/20"><div className="w-[900px] rounded-xl bg-white p-5 shadow-2xl"><div className="mb-4 flex items-center justify-between"><div className="text-lg font-bold text-[#14284B]">Case Detail <span className="text-sm font-normal text-gray-500">{fieldDev(selected)}</span></div><button onClick={()=>setQuick(false)}>Close</button></div><div className="grid grid-cols-4 gap-3 text-sm"><Info title="Issue" text={fieldIssue(selected)}/><Info title="Action/Test" text={fieldAction(selected)}/><Info title="Conclusion" text={selected.conclusion||'-'}/><Info title="Decision" text={selected.decision||'-'}/></div><div className="mt-3 grid grid-cols-3 gap-3 text-sm"><Info title="Lesson Learned" text={fieldLesson(selected)}/><Info title="Applicable Scope" text={selected.applicable_scope||'-'}/><Info title="Required Verification" text={selected.required_verification||'-'}/></div><div className="mt-4 flex gap-2"><button className="btn">Edit</button><button className="rounded bg-[#1B4C8C] px-3 py-2 font-semibold text-white">Approve</button><button className="btn">View History</button></div></div></div>}</section></main>}
+function Info({title,text}:{title:string;text:string}){return <div className="rounded-lg border border-[#E5E7EB] p-3"><div className="mb-1 text-[12px] font-bold text-[#14284B]">{title}</div><div className="text-[#374151]">{text}</div></div>}

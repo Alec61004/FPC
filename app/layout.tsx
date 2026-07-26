@@ -6,17 +6,18 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = { title: "Deviation Knowledge Hub", description: "Deltrol Controls part-centric deviation knowledge app" };
+export const metadata: Metadata = {
+  title: "Deviation Knowledge Hub",
+  description: "Deltrol Controls deviation knowledge hub",
+};
 
-function DeltrolLogo() {
+function Logo() {
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-8 w-11 -rotate-12 rounded-[50%] bg-[#1C6AA8] grid place-items-center shadow-sm">
-        <span className="rotate-12 text-[12px] font-black tracking-tight text-white">DC</span>
-      </div>
-      <div className="leading-none hidden sm:block">
-        <div className="text-[17px] font-extrabold tracking-tight text-white">Deltrol</div>
-        <div className="text-[10px] font-bold tracking-[0.16em] text-[#74B9E6]">CONTROLS</div>
+    <div className="flex items-center gap-3">
+      <div className="grid h-10 w-10 place-items-center rounded bg-white font-black text-[#14284B]">DC</div>
+      <div className="leading-tight">
+        <div className="text-[18px] font-extrabold">Deviation Knowledge Hub</div>
+        <div className="text-[10px] font-semibold tracking-[0.18em] text-white/70">DELTROL CONTROLS</div>
       </div>
     </div>
   );
@@ -26,16 +27,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <div className="min-h-[100dvh] bg-[#F5F7FA] text-[#1A2333]">
-          <header className="sticky top-0 z-40 h-14 bg-[#0F2540] text-white flex items-center justify-between px-4 shadow-sm">
-            <div className="flex items-center gap-4 min-w-0">
-              <DeltrolLogo />
-              <div className="h-7 w-px bg-white/20" />
-              <div className="font-semibold tracking-tight truncate">Deviation Knowledge Hub</div>
-            </div>
-            <nav className="flex items-center gap-1 text-[13px]">
-              <Link className="px-3 py-1.5 rounded hover:bg-white/10" href="/dashboard">Dashboard</Link>
-              <Link className="px-3 py-1.5 rounded hover:bg-white/10" href="/parts">Parts</Link>
+        <div className="min-h-[100dvh] bg-[#F4F6F9] text-[#1A2333]">
+          <header className="flex h-[72px] items-center justify-between bg-[#14284B] px-5 text-white shadow-sm">
+            <Logo />
+            <nav className="flex items-center gap-1 text-[13px] font-medium">
+              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Dashboard</Link>
+              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/parts">Deviations</Link>
+              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/parts">Parts</Link>
+              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Reports/Analytics</Link>
+              <Link className="rounded px-3 py-2 hover:bg-white/10" href="/dashboard">Settings</Link>
             </nav>
             <div className="hidden xl:flex items-center gap-4 text-xs text-white/80">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400"/>Connected</span>
